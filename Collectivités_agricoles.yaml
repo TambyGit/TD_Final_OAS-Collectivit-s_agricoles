@@ -33,6 +33,7 @@ components:
           type: string
           format: uuid
           description: ID du président actuel (membre confirmé)
+
     Membre:
       type: object
       required:
@@ -79,3 +80,65 @@ components:
         ancienneteJours:
           type: integer
           description: Nombre de jours depuis l'adhésion
+
+    Paiement:
+      type: object
+      required:
+        - id
+        - membreId
+        - montant
+        - datePaiement
+        - typePaiement
+      properties:
+        id:
+          type: string
+          format: uuid
+        membreId:
+          type: string
+          format: uuid
+        collectiviteId:
+          type: string
+          format: uuid
+        montant:
+          type: number
+          format: decimal
+          description: Montant en Ariary (MGA)
+        datePaiement:
+          type: string
+          format: date-time
+        typePaiement:
+          type: string
+          enum: [ADHESION, COTISATION_MENSUELLE, COTISATION_ANNUELLE, PONCTUELLE]
+        modePaiement:
+          type: string
+          enum: [MOBILE_MONEY, VIREMENT_BANCAIRE, ESPECES]
+        reference:
+          type: string
+          description: Référence transaction
+          
+CompteTresorerie:
+      type: object
+      required:
+        - id
+        - collectiviteId
+        - typeCompte
+        - solde
+      properties:
+        id:
+          type: string
+          format: uuid
+        collectiviteId:
+          type: string
+          format: uuid
+        typeCompte:
+          type: string
+          enum: [CAISSE, BANQUE, MOBILE_MONEY]
+        nomTitulaire:
+          type: string
+        detailsCompte:
+          type: string
+          description: "Pour banque : BRED-XXXXX / Pour mobile money : Numéro téléphone + Opérateur"
+        solde:
+          type: number
+          format: decimal
+          description: Solde actuel en MGA
