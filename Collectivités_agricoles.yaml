@@ -1,0 +1,25 @@
+openapi: 3.0.3
+info:
+  title: Ping API
+  description: API simple pour tester si le serveur répond
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /ping:
+    get:
+      summary: Ping endpoint
+      description: Retourne "pong" pour vérifier que l'API fonctionne
+      responses:
+        '200':
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: pong
