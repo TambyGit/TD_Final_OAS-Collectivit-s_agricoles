@@ -115,8 +115,8 @@ components:
         reference:
           type: string
           description: Référence transaction
-          
-CompteTresorerie:
+
+    CompteTresorerie:
       type: object
       required:
         - id
@@ -142,3 +142,52 @@ CompteTresorerie:
           type: number
           format: decimal
           description: Solde actuel en MGA
+
+    Activite:
+       type: object
+       required:
+        - id
+        - typeActivite
+        - date
+        - collectiviteId
+
+       properties:
+        id:
+          type: string
+          format: uuid
+        typeActivite:
+          type: string
+          enum: [ASSEMBLEE_GENERALE_MENSUELLE, FORMATION_JUNIORS, ACTIVITE_EXCEPTIONNELLE]
+        date:
+          type: string
+          format: date-time
+        collectiviteId:
+          type: string
+          format: uuid
+        obligatoire:
+          type: boolean
+        theme:
+          type: string
+          description: Optionnel pour activités exceptionnelles
+
+    Presence:
+      type: object
+      required:
+        - activiteId
+        - membreId
+        - present
+      properties:
+        activiteId:
+          type: string
+          format: uuid
+        membreId:
+          type: string
+          format: uuid
+        present:
+          type: boolean
+        dateEnregistrement:
+          type: string
+          format: date-time
+        excuse:
+          type: string
+          description: Motif d'absence si non présent et excusé
