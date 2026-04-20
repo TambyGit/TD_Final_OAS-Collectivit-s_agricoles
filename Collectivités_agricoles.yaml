@@ -1,25 +1,81 @@
-openapi: 3.0.3
-info:
-  title: Ping API
-  description: API simple pour tester si le serveur répond
-  version: 1.0.0
-
-servers:
-  - url: http://localhost:8000
-
-paths:
-  /ping:
-    get:
-      summary: Ping endpoint
-      description: Retourne "pong" pour vérifier que l'API fonctionne
-      responses:
-        '200':
-          description: Réponse réussie
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: pong
+components: 
+  shemas: 
+    Collectivite: 
+    type: objet
+    required:
+        - id
+        - nom
+        - ville
+        - specialiteAgricole
+        - dateCreation
+    properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant unique de la collectivité
+        nom:
+          type: string
+          description: Nom unique de la collectivité
+        ville:
+          type: string
+          description: ville où exerce la collectivité
+        specialiteAgricole:
+          type: string
+          description: Spécialité agricole exercée
+        dateCreation:
+          type: string
+          format: date
+          description: Date de création de la collectivité
+        nombreMembres:
+          type: integer
+          description: Nombre total de membres inscrits
+        presidentId:
+          type: string
+          format: uuid
+          description: ID du président actuel (membre confirmé)
+    Membre:
+      type: object
+      required:
+        - id
+        - nom
+        - prenoms
+        - dateNaissance
+        - genre
+        - adresse
+        - telephone
+        - dateAdhesion
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+        prenoms:
+          type: string
+        dateNaissance:
+          type: string
+          format: date
+        genre:
+          type: string
+          enum: [MASCULIN, FEMININ]
+        adresse:
+          type: string
+        telephone:
+          type: string
+        email:
+          type: string
+          format: email
+        metierExerce:
+          type: string
+        dateAdhesion:
+          type: string
+          format: date
+        collectiviteId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [PRESIDENT, PRESIDENT_ADJOINT, TRESORIER, SECRETAIRE, MEMBRE_CONFIRME, MEMBRE_JUNIOR]
+        ancienneteJours:
+          type: integer
+          description: Nombre de jours depuis l'adhésion
