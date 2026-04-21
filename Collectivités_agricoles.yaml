@@ -8,7 +8,6 @@ info:
     de collectivités agricoles à Madagascar. Couvre l'ouverture de
     collectivités, l'admission de membres, les paiements, la trésorerie,
     les activités, l'assiduité et les statistiques.
-
 paths:
 
   /collectivites:
@@ -158,10 +157,14 @@ paths:
         - B - Membres
       summary: Admettre un nouveau membre dans une collectivité
       description: >
-        Enregistre un nouveau membre. Conditions requises : être parrainé par
-        un membre confirmé dont l'ancienneté dépasse 90 jours, fournir les
-        informations personnelles complètes et régler les frais d'adhésion
-        (50 000 MGA par mobile money ou virement bancaire).
+        Enregistre un nouveau membre selon les conditions renforcées (B-2).
+        Le candidat doit être parrainé par au moins deux membres confirmés de la fédération,
+        dont le nombre de parrains issus de la collectivité cible doit être au moins égal
+        au nombre de parrains issus d'autres collectivités.
+        Il doit fournir ses informations personnelles incluant la nature de sa relation
+        avec chaque parrain (famille, amis, collègues, etc.).
+        Il doit régler les frais d'adhésion de 50 000 MGA ainsi que l'intégralité
+        des cotisations annuelles obligatoires imposées par la collectivité.
       operationId: admettreMembre
       parameters:
         - $ref: '#/components/parameters/collectiviteId'
@@ -186,8 +189,8 @@ paths:
                 $ref: '#/components/schemas/Erreur'
         '422':
           description: >
-            Conditions d'admission non satisfaites (parrain non éligible,
-            paiement manquant…)
+            Conditions d'admission non satisfaites (parrains insuffisants ou non éligibles,
+            règle de majorité de parrains non respectée, paiement manquant…)
           content:
             application/json:
               schema:
@@ -829,6 +832,78 @@ paths:
         '404':
           $ref: '#/components/responses/NonTrouve'
 
+  /federation/statistiques:
+    get:
+      tags:
+        - H - Statistiques Fédération
+      summary: Rapport global de la fédération sur toutes les collectivités
+      description: >
+        Retourne le rapport global de la fédération sur une période donnée,
+        incluant pour chaque collectivité : le taux d'assiduité global,
+        le pourcentage de membres à jour dans leur cotisation, et le nombre
+        de nouveaux adhérents. Ce rapport est établi mensuellement par le
+        secrétaire de la fédération et présenté annuellement lors des
+        assemblées générales.
+      operationId: obtenirStatistiquesFederation
+      parameters:
+        - name: dateDebut
+          in: query
+          required: true
+          description: Début de la période d'analyse
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          required: true
+          description: Fin de la période d'analyse
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rapport global de la fédération
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatistiquesFederation'
+        '400':
+          description: Paramètres de période invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /federation/statistiques/{collectiviteId}:
+    get:
+      tags:
+        - H - Statistiques Fédération
+      summary: Rapport de la fédération pour une collectivité spécifique
+      operationId: obtenirStatistiquesFederationParCollectivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: dateDebut
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rapport fédération pour la collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatistiquesCollectiviteFederation'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
 components:
 
   parameters:
@@ -1002,7 +1077,7 @@ components:
         - genre
         - adresse
         - telephone
-        - parrainId
+        - parrains
         - referencesPaiementAdhesion
       properties:
         nom:
@@ -1024,16 +1099,21 @@ components:
           format: email
         metierExerce:
           type: string
-        parrainId:
-          type: string
-          format: uuid
+        parrains:
+          type: array
+          minItems: 2
           description: >
-            ID du membre confirmé parrain dont l'ancienneté doit dépasser 90 jours
+            Liste d'au moins deux parrains membres confirmés de la fédération.
+            Le nombre de parrains issus de la collectivité cible doit être au moins
+            égal au nombre de parrains issus d'autres collectivités.
+          items:
+            $ref: '#/components/schemas/ParrainageAdmission'
         referencesPaiementAdhesion:
           type: string
           description: >
-            Référence du paiement des frais d'adhésion (50 000 MGA par
-            mobile money ou virement bancaire)
+            Référence du paiement des frais d'adhésion (50 000 MGA) et de
+            l'intégralité des cotisations annuelles obligatoires imposées
+            par la collectivité (mobile money ou virement bancaire)
 
     MembreModification:
       type: object
@@ -1327,6 +1407,53 @@ components:
           type: number
           format: decimal
           description: Montant potentiellement impayé par le membre sur la période (en MGA)
+
+    ParrainageAdmission:
+      type: object
+      required:
+        - parrainId
+        - relationAvecCandidat
+      properties:
+        parrainId:
+          type: string
+          format: uuid
+          description: ID du membre confirmé de la fédération qui parraine le candidat
+        relationAvecCandidat:
+          type: string
+          description: Nature de la relation entre le parrain et le candidat (famille, amis, collègues, etc.)
+    StatistiquesFederation:
+      type: object
+      properties:
+        dateDebut:
+          type: string
+          format: date
+        dateFin:
+          type: string
+          format: date
+        collectivites:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatistiquesCollectiviteFederation'
+
+    StatistiquesCollectiviteFederation:
+      type: object
+      properties:
+        collectiviteId:
+          type: string
+          format: uuid
+        nomCollectivite:
+          type: string
+        tauxAssiduitePourcentage:
+          type: number
+          format: decimal
+          description: Taux d'assiduité global de la collectivité sur la période donnée
+        pourcentageMembresCotisationAJour:
+          type: number
+          format: decimal
+          description: Pourcentage de membres à jour dans leur cotisation sur la période donnée
+        nombreNouveauxAdherents:
+          type: integer
+          description: Nombre de nouveaux adhérents enregistrés sur la période donnée
 
     Erreur:
       type: object
