@@ -1,14 +1,885 @@
-components: 
-  shemas: 
-    Collectivite: 
-    type: objet
-    required:
+openapi: 3.0.3
+
+info:
+  title: API Fédération de Collectivités Agricoles
+  version: 1.0.0
+  description: >
+    Spécification OpenAPI pour la gestion numérique de la fédération
+    de collectivités agricoles à Madagascar. Couvre l'ouverture de
+    collectivités, l'admission de membres, les paiements, la trésorerie,
+    les activités, l'assiduité et les statistiques.
+
+paths:
+
+  /collectivites:
+    get:
+      tags:
+        - A - Collectivités
+      summary: Lister toutes les collectivités
+      operationId: listerCollectivites
+      parameters:
+        - name: ville
+          in: query
+          description: Filtrer par ville
+          schema:
+            type: string
+        - name: specialiteAgricole
+          in: query
+          description: Filtrer par spécialité agricole
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des collectivités
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collectivite'
+
+    post:
+      tags:
+        - A - Collectivités
+      summary: Ouvrir une nouvelle collectivité
+      description: >
+        Crée une nouvelle collectivité si toutes les conditions sont remplies :
+        au moins 10 membres inscrits avec une antériorité de 6 mois au sein de
+        la fédération, postes spécifiques pourvus, autorisation formelle de la
+        fédération, localité et spécialité agricole définies.
+      operationId: ouvrirCollectivite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectiviteCreation'
+      responses:
+        '201':
+          description: Collectivité créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivite'
+        '400':
+          description: Données invalides ou conditions non remplies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '422':
+          description: >
+            Conditions d'ouverture non satisfaites (membres insuffisants,
+            postes manquants, autorisation absente…)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /collectivites/{collectiviteId}:
+    get:
+      tags:
+        - A - Collectivités
+      summary: Obtenir le détail d'une collectivité
+      operationId: obtenirCollectivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      responses:
+        '200':
+          description: Détail de la collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivite'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    put:
+      tags:
+        - A - Collectivités
+      summary: Mettre à jour une collectivité
+      operationId: mettreAJourCollectivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectiviteModification'
+      responses:
+        '200':
+          description: Collectivité mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collectivite'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/membres:
+    get:
+      tags:
+        - B - Membres
+      summary: Lister les membres d'une collectivité
+      operationId: listerMembres
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - PRESIDENT
+              - PRESIDENT_ADJOINT
+              - TRESORIER
+              - SECRETAIRE
+              - MEMBRE_CONFIRME
+              - MEMBRE_JUNIOR
+        - name: actif
+          in: query
+          description: "true = membres non démissionnés uniquement"
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Liste des membres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    post:
+      tags:
+        - B - Membres
+      summary: Admettre un nouveau membre dans une collectivité
+      description: >
+        Enregistre un nouveau membre. Conditions requises : être parrainé par
+        un membre confirmé dont l'ancienneté dépasse 90 jours, fournir les
+        informations personnelles complètes et régler les frais d'adhésion
+        (50 000 MGA par mobile money ou virement bancaire).
+      operationId: admettreMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembreAdmission'
+      responses:
+        '201':
+          description: Membre admis avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '422':
+          description: >
+            Conditions d'admission non satisfaites (parrain non éligible,
+            paiement manquant…)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /collectivites/{collectiviteId}/membres/{membreId}:
+    get:
+      tags:
+        - B - Membres
+      summary: Obtenir le détail d'un membre
+      operationId: obtenirMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/membreId'
+      responses:
+        '200':
+          description: Détail du membre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    put:
+      tags:
+        - B - Membres
+      summary: Mettre à jour les informations d'un membre
+      operationId: mettreAJourMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/membreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembreModification'
+      responses:
+        '200':
+          description: Membre mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/membres/{membreId}/demission:
+    post:
+      tags:
+        - B - Membres
+      summary: Enregistrer la démission d'un membre
+      operationId: demissionnerMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/membreId'
+      responses:
+        '200':
+          description: Démission enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/membres/{membreId}/transfert:
+    post:
+      tags:
+        - B - Membres
+      summary: Transférer un membre vers une autre collectivité
+      operationId: transfererMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/membreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nouvelleCollectiviteId
+              properties:
+                nouvelleCollectiviteId:
+                  type: string
+                  format: uuid
+                  description: ID de la collectivité de destination
+      responses:
+        '200':
+          description: Transfert effectué
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+        '422':
+          description: Collectivité de destination introuvable ou conditions non satisfaites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /collectivites/{collectiviteId}/paiements:
+    get:
+      tags:
+        - C - Paiements
+      summary: Lister les paiements d'une collectivité
+      operationId: listerPaiements
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: membreId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: typePaiement
+          in: query
+          schema:
+            type: string
+            enum:
+              - ADHESION
+              - COTISATION_MENSUELLE
+              - COTISATION_ANNUELLE
+              - PONCTUELLE
+        - name: dateDebut
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des paiements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Paiement'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    post:
+      tags:
+        - C - Paiements
+      summary: Enregistrer un paiement
+      description: >
+        Le trésorier enregistre un encaissement en précisant le montant
+        (en MGA), la date, le type et le mode de paiement. Un pourcentage
+        des cotisations périodiques est automatiquement reversé à la fédération.
+      operationId: enregistrerPaiement
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaiementCreation'
+      responses:
+        '201':
+          description: Paiement enregistré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paiement'
+        '400':
+          description: Données de paiement invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/paiements/{paiementId}:
+    get:
+      tags:
+        - C - Paiements
+      summary: Obtenir le détail d'un paiement
+      operationId: obtenirPaiement
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: paiementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détail du paiement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paiement'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/comptes:
+    get:
+      tags:
+        - D - Trésorerie
+      summary: Lister les comptes de trésorerie d'une collectivité
+      description: >
+        Retourne tous les comptes (caisse, bancaires, mobile money).
+        Une collectivité ne peut posséder qu'une seule caisse mais peut avoir
+        plusieurs comptes bancaires ou mobile money.
+      operationId: listerComptes
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: typeCompte
+          in: query
+          schema:
+            type: string
+            enum:
+              - CAISSE
+              - BANQUE
+              - MOBILE_MONEY
+      responses:
+        '200':
+          description: Liste des comptes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompteTresorerie'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    post:
+      tags:
+        - D - Trésorerie
+      summary: Créer un compte de trésorerie
+      description: >
+        Crée un nouveau compte bancaire ou mobile money. La création d'une
+        deuxième caisse est refusée (unicité de la caisse par collectivité).
+        Un compte bancaire est identifié par le format BBBBB-GGGGG-CCCCCCCCCCC-KK.
+        Un compte mobile money est identifié par un numéro de téléphone unique
+        et le nom de l'opérateur (Orange Money, Mvola ou Airtel Money).
+      operationId: creerCompte
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteTresorerieCreation'
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompteTresorerie'
+        '409':
+          description: Caisse déjà existante pour cette collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/comptes/{compteId}:
+    get:
+      tags:
+        - D - Trésorerie
+      summary: Obtenir le solde et le détail d'un compte
+      operationId: obtenirCompte
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: compteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: dateReference
+          in: query
+          description: Solde à une date donnée (par défaut, date du jour)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Détail du compte avec solde
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompteTresorerie'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    put:
+      tags:
+        - D - Trésorerie
+      summary: Mettre à jour un compte de trésorerie
+      operationId: mettreAJourCompte
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: compteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteTresorerieModification'
+      responses:
+        '200':
+          description: Compte mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompteTresorerie'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/activites:
+    get:
+      tags:
+        - E - Activités
+      summary: Lister les activités d'une collectivité
+      operationId: listerActivites
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: typeActivite
+          in: query
+          schema:
+            type: string
+            enum:
+              - ASSEMBLEE_GENERALE_MENSUELLE
+              - FORMATION_JUNIORS
+              - ACTIVITE_EXCEPTIONNELLE
+        - name: dateDebut
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des activités
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activite'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    post:
+      tags:
+        - E - Activités
+      summary: Planifier une activité
+      description: >
+        Crée une nouvelle activité pour la collectivité. Les assemblées générales
+        mensuelles et les formations juniors sont obligatoires et planifiées
+        annuellement sur des dates fixes. Les activités exceptionnelles sont
+        créées à la demande, avec définition par la collectivité du périmètre
+        de présence obligatoire (tous ou certains membres).
+      operationId: planifierActivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActiviteCreation'
+      responses:
+        '201':
+          description: Activité planifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/activites/{activiteId}:
+    get:
+      tags:
+        - E - Activités
+      summary: Obtenir le détail d'une activité
+      operationId: obtenirActivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/activiteId'
+      responses:
+        '200':
+          description: Détail de l'activité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    put:
+      tags:
+        - E - Activités
+      summary: Modifier une activité planifiée
+      operationId: modifierActivite
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/activiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActiviteModification'
+      responses:
+        '200':
+          description: Activité modifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/activites/{activiteId}/presences:
+    get:
+      tags:
+        - F - Assiduité
+      summary: Lister les présences pour une activité
+      operationId: listerPresences
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/activiteId'
+      responses:
+        '200':
+          description: Feuille de présence de l'activité
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Presence'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+    post:
+      tags:
+        - F - Assiduité
+      summary: Enregistrer la présence d'un membre à une activité
+      description: >
+        Le secrétaire enregistre la présence ou l'absence d'un membre.
+        Un membre peut être excusé si le motif a été communiqué au secrétaire
+        avant la tenue de l'activité. La présence d'un membre d'une autre
+        collectivité est enregistrable mais n'est pas comptabilisée dans son
+        taux d'assiduité annuel.
+      operationId: enregistrerPresence
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/activiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresenceEnregistrement'
+      responses:
+        '201':
+          description: Présence enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Presence'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+        '409':
+          description: Présence déjà enregistrée pour ce membre à cette activité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /collectivites/{collectiviteId}/activites/{activiteId}/presences/{membreId}:
+    put:
+      tags:
+        - F - Assiduité
+      summary: Corriger la présence d'un membre
+      operationId: corrigerPresence
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/activiteId'
+        - $ref: '#/components/parameters/membreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresenceEnregistrement'
+      responses:
+        '200':
+          description: Présence corrigée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Presence'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/statistiques:
+    get:
+      tags:
+        - G - Statistiques
+      summary: Rapport global d'assiduité (rapport mensuel fédération)
+      description: >
+        Retourne le taux d'assiduité global de la collectivité ainsi que le
+        nombre de membres actifs inscrits. Ce rapport est transmis mensuellement
+        par le président à la fédération pour évaluer la pérennité de la collectivité.
+      operationId: obtenirStatistiquesGlobales
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: mois
+          in: query
+          required: true
+          description: Mois de référence (format YYYY-MM)
+          schema:
+            type: string
+            example: "2025-04"
+      responses:
+        '200':
+          description: Statistiques globales de la collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatistiquesGlobales'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/statistiques/membres:
+    get:
+      tags:
+        - G - Statistiques
+      summary: Statistiques détaillées par membre actif
+      description: >
+        Retourne, pour chaque membre actif (non démissionné), les statistiques
+        détaillées sur une période donnée : taux d'assiduité individuel,
+        montant total encaissé et montant potentiellement impayé.
+      operationId: obtenirStatistiquesMembres
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - name: dateDebut
+          in: query
+          required: true
+          description: Début de la période d'analyse
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          required: true
+          description: Fin de la période d'analyse
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistiques détaillées par membre
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatistiquesMembre'
+        '400':
+          description: Paramètres de période invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+  /collectivites/{collectiviteId}/statistiques/membres/{membreId}:
+    get:
+      tags:
+        - G - Statistiques
+      summary: Statistiques détaillées d'un membre spécifique
+      operationId: obtenirStatistiquesMembre
+      parameters:
+        - $ref: '#/components/parameters/collectiviteId'
+        - $ref: '#/components/parameters/membreId'
+        - name: dateDebut
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: dateFin
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistiques du membre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatistiquesMembre'
+        '404':
+          $ref: '#/components/responses/NonTrouve'
+
+components:
+
+  parameters:
+
+    collectiviteId:
+      name: collectiviteId
+      in: path
+      required: true
+      description: Identifiant unique de la collectivité
+      schema:
+        type: string
+        format: uuid
+
+    membreId:
+      name: membreId
+      in: path
+      required: true
+      description: Identifiant unique du membre
+      schema:
+        type: string
+        format: uuid
+
+    activiteId:
+      name: activiteId
+      in: path
+      required: true
+      description: Identifiant unique de l'activité
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+
+    NonTrouve:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+
+  schemas:
+
+    Collectivite:
+      type: object
+      required:
         - id
         - nom
         - ville
         - specialiteAgricole
         - dateCreation
-    properties:
+      properties:
         id:
           type: string
           format: uuid
@@ -18,7 +889,7 @@ components:
           description: Nom unique de la collectivité
         ville:
           type: string
-          description: ville où exerce la collectivité
+          description: Ville où exerce la collectivité
         specialiteAgricole:
           type: string
           description: Spécialité agricole exercée
@@ -33,6 +904,44 @@ components:
           type: string
           format: uuid
           description: ID du président actuel (membre confirmé)
+
+    CollectiviteCreation:
+      type: object
+      required:
+        - nom
+        - ville
+        - specialiteAgricole
+        - membresFoundateurs
+      properties:
+        nom:
+          type: string
+        ville:
+          type: string
+        specialiteAgricole:
+          type: string
+        membresFoundateurs:
+          type: array
+          minItems: 10
+          description: >
+            Liste des IDs des membres fondateurs (min. 10, ancienneté >= 6 mois
+            au sein de la fédération)
+          items:
+            type: string
+            format: uuid
+        autorisationFederationRef:
+          type: string
+          description: Référence de l'autorisation formelle délivrée par la fédération
+
+    CollectiviteModification:
+      type: object
+      properties:
+        ville:
+          type: string
+        specialiteAgricole:
+          type: string
+        presidentId:
+          type: string
+          format: uuid
 
     Membre:
       type: object
@@ -80,6 +989,67 @@ components:
         ancienneteJours:
           type: integer
           description: Nombre de jours depuis l'adhésion
+        actif:
+          type: boolean
+          description: "false si le membre a démissionné"
+
+    MembreAdmission:
+      type: object
+      required:
+        - nom
+        - prenoms
+        - dateNaissance
+        - genre
+        - adresse
+        - telephone
+        - parrainId
+        - referencesPaiementAdhesion
+      properties:
+        nom:
+          type: string
+        prenoms:
+          type: string
+        dateNaissance:
+          type: string
+          format: date
+        genre:
+          type: string
+          enum: [MASCULIN, FEMININ]
+        adresse:
+          type: string
+        telephone:
+          type: string
+        email:
+          type: string
+          format: email
+        metierExerce:
+          type: string
+        parrainId:
+          type: string
+          format: uuid
+          description: >
+            ID du membre confirmé parrain dont l'ancienneté doit dépasser 90 jours
+        referencesPaiementAdhesion:
+          type: string
+          description: >
+            Référence du paiement des frais d'adhésion (50 000 MGA par
+            mobile money ou virement bancaire)
+
+    MembreModification:
+      type: object
+      properties:
+        adresse:
+          type: string
+        telephone:
+          type: string
+        email:
+          type: string
+          format: email
+        metierExerce:
+          type: string
+        role:
+          type: string
+          enum: [PRESIDENT, PRESIDENT_ADJOINT, TRESORIER, SECRETAIRE, MEMBRE_CONFIRME, MEMBRE_JUNIOR]
 
     Paiement:
       type: object
@@ -116,6 +1086,31 @@ components:
           type: string
           description: Référence transaction
 
+    PaiementCreation:
+      type: object
+      required:
+        - membreId
+        - montant
+        - typePaiement
+        - modePaiement
+      properties:
+        membreId:
+          type: string
+          format: uuid
+        montant:
+          type: number
+          format: decimal
+          description: Montant en MGA
+        typePaiement:
+          type: string
+          enum: [ADHESION, COTISATION_MENSUELLE, COTISATION_ANNUELLE, PONCTUELLE]
+        modePaiement:
+          type: string
+          enum: [MOBILE_MONEY, VIREMENT_BANCAIRE, ESPECES]
+        reference:
+          type: string
+          description: Référence de la transaction (obligatoire pour mobile money et virement)
+
     CompteTresorerie:
       type: object
       required:
@@ -135,6 +1130,7 @@ components:
           enum: [CAISSE, BANQUE, MOBILE_MONEY]
         nomTitulaire:
           type: string
+          description: Nom du titulaire du compte
         detailsCompte:
           type: string
           description: "Pour banque : BRED-XXXXX / Pour mobile money : Numéro téléphone + Opérateur"
@@ -143,15 +1139,44 @@ components:
           format: decimal
           description: Solde actuel en MGA
 
+    CompteTresorerieCreation:
+      type: object
+      required:
+        - typeCompte
+      properties:
+        typeCompte:
+          type: string
+          enum: [CAISSE, BANQUE, MOBILE_MONEY]
+        nomTitulaire:
+          type: string
+        detailsCompte:
+          type: string
+          description: >
+            Obligatoire pour BANQUE et MOBILE_MONEY.
+            Format BANQUE : BBBBB-GGGGG-CCCCCCCCCCC-KK.
+            Format MOBILE_MONEY : numéro de téléphone + opérateur
+            (Orange Money, Mvola ou Airtel Money).
+        soldeInitial:
+          type: number
+          format: decimal
+          default: 0
+
+    CompteTresorerieModification:
+      type: object
+      properties:
+        nomTitulaire:
+          type: string
+        detailsCompte:
+          type: string
+
     Activite:
-       type: object
-       required:
+      type: object
+      required:
         - id
         - typeActivite
         - date
         - collectiviteId
-
-       properties:
+      properties:
         id:
           type: string
           format: uuid
@@ -166,9 +1191,59 @@ components:
           format: uuid
         obligatoire:
           type: boolean
+          description: >
+            true pour ASSEMBLEE_GENERALE_MENSUELLE et FORMATION_JUNIORS.
+            Pour ACTIVITE_EXCEPTIONNELLE, défini par la collectivité.
         theme:
           type: string
           description: Optionnel pour activités exceptionnelles
+        membresObligatoires:
+          type: array
+          description: >
+            Pour une activité exceptionnelle à présence restreinte, liste des
+            IDs des membres pour lesquels la présence est obligatoire.
+            Si vide, l'obligation s'applique à tous.
+          items:
+            type: string
+            format: uuid
+
+    ActiviteCreation:
+      type: object
+      required:
+        - typeActivite
+        - date
+      properties:
+        typeActivite:
+          type: string
+          enum: [ASSEMBLEE_GENERALE_MENSUELLE, FORMATION_JUNIORS, ACTIVITE_EXCEPTIONNELLE]
+        date:
+          type: string
+          format: date-time
+        theme:
+          type: string
+        obligatoire:
+          type: boolean
+        membresObligatoires:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ActiviteModification:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        theme:
+          type: string
+        obligatoire:
+          type: boolean
+        membresObligatoires:
+          type: array
+          items:
+            type: string
+            format: uuid
 
     Presence:
       type: object
@@ -191,3 +1266,82 @@ components:
         excuse:
           type: string
           description: Motif d'absence si non présent et excusé
+        membreExterieur:
+          type: boolean
+          description: >
+            true si le membre appartient à une autre collectivité.
+            Sa présence est enregistrée mais non comptabilisée dans
+            son taux d'assiduité.
+
+    PresenceEnregistrement:
+      type: object
+      required:
+        - membreId
+        - present
+      properties:
+        membreId:
+          type: string
+          format: uuid
+        present:
+          type: boolean
+        excuse:
+          type: string
+          description: Motif d'absence (requis si present=false et membre excusé)
+
+    StatistiquesGlobales:
+      type: object
+      properties:
+        collectiviteId:
+          type: string
+          format: uuid
+        mois:
+          type: string
+          description: Mois de référence (YYYY-MM)
+        tauxAssiduitePourcentage:
+          type: number
+          format: decimal
+          description: Taux d'assiduité global de la collectivité en pourcentage
+        nombreMembresActifs:
+          type: integer
+          description: Nombre de membres actifs inscrits dans la collectivité
+
+    StatistiquesMembre:
+      type: object
+      properties:
+        membreId:
+          type: string
+          format: uuid
+        nom:
+          type: string
+        prenoms:
+          type: string
+        tauxAssiduitePourcentage:
+          type: number
+          format: decimal
+          description: Taux d'assiduité individuel sur la période donnée
+        montantEncaisseTotalMGA:
+          type: number
+          format: decimal
+          description: Montant total encaissé par le membre sur la période (en MGA)
+        montantImpayePotentielMGA:
+          type: number
+          format: decimal
+          description: Montant potentiellement impayé par le membre sur la période (en MGA)
+
+    Erreur:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Code d'erreur interne
+        message:
+          type: string
+          description: Message descriptif de l'erreur
+        details:
+          type: array
+          items:
+            type: string
+          description: Détails supplémentaires sur les champs ou conditions en cause
